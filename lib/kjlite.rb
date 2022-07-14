@@ -19,7 +19,7 @@ module KjLite
     end
 
     def inspect()
-      "#<KjLite::Verse @book_name=#{@book_name} " + 
+      "#<KjLite::Verse @book_name=#{@book_name} " +
         "@chapter_id=#{@chapter_id} @number=#{@number}>"
     end
 
@@ -53,7 +53,7 @@ module KjLite
     def verses(*list)
 
       puts 'inside verses' if @debug
-      
+
       list = list.first.to_a if list.first.is_a? Range
 
       if list.empty? then
@@ -61,7 +61,7 @@ module KjLite
       elsif list.length < 2
         Verse.new @book_name, @id, list.first, @verses[list.first.to_i-1]
       else
-        list.flatten.map do |n| 
+        list.flatten.map do |n|
           Verse.new @book_name, @id, n, @verses[n.to_i-1]
         end
       end
@@ -85,7 +85,7 @@ module KjLite
   class Book
 
     attr_reader :id, :name, :permalink
- 
+
     def initialize(id, name, chapters, debug: false)
 
       @id, @name, @debug = id, name, debug
@@ -103,7 +103,7 @@ module KjLite
 
     def chapters(*args)
 
-      puts 'args: ' + args.inspect if @debug     
+      puts 'args: ' + args.inspect if @debug
 
       if args.empty? then
         return @chapters
@@ -112,7 +112,7 @@ module KjLite
       else
         args.flatten.map {|n| @chapters[n-1] }.compact
       end
-      
+
     end
 
     def inspect()
@@ -129,15 +129,15 @@ module KjLite
 
     attr_reader :to_h, :to_s, :booklist
 
-    def initialize(url='http://www.gutenberg.org/cache/epub/30/pg30.txt',
+    def initialize(url='https://gutenberg.org/cache/epub/30/pg30.txt',
                   debug: false)
-      
+
       filename, @debug = 'kjbible.txt', debug
 
       if File.exists?(filename) then
         s = File.read(filename)
       else
-        s = open(url).read
+        s = URI.open(url).read
         File.write filename, s
       end
 
@@ -150,7 +150,7 @@ module KjLite
 
         a2 = body.split(/.*(?=\d+\:\d+\:\d+)/)
         a3 = a2.group_by {|x| x[/^\d+:\d+/]}.to_a.map(&:last)
-        r.merge(title => a3[1..-1])  
+        r.merge(title => a3[1..-1])
 
       end
 
@@ -164,8 +164,8 @@ module KjLite
 
     end
 
-    def books(ref=nil)           
-      
+    def books(ref=nil)
+
       return @booklist.map {|x| books(x) } unless ref
 
       index = ref.to_s[/^\d+$/] ? (ref.to_i - 1) : find_book(ref.downcase)
@@ -231,4 +231,3 @@ module KjLite
   end
 
 end
-

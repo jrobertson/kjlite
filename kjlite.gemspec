@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'kjlite'
-  s.version = '0.2.0'
+  s.version = '0.3.0'
   s.summary = 'kjlist is a lightweight version of the kj gem for accessing ' +
       'the King James Bible. It downloads the text file from gutenberg.org.'
   s.authors = ['James Robertson']

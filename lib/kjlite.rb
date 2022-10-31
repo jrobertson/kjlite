@@ -19,12 +19,12 @@ module KjLite
     end
 
     def inspect()
-      "#<KjLite::Verse @book_name=#{@book_name} " +
+      "#<KjLite::Verse @book_name=#{@book_name} " + 
         "@chapter_id=#{@chapter_id} @number=#{@number}>"
     end
 
     def text()
-      @verse[/^\d+:\d+:\d+\s+(.*)/m,1].gsub(/[\r\n]|\s\s/,'')
+      @verse[/^\d+:\d+:\d+\s+(.*)/m,1].gsub(/[\r\n\s]+/,' ').rstrip
     end
 
     def title()
@@ -53,15 +53,19 @@ module KjLite
     def verses(*list)
 
       puts 'inside verses' if @debug
-
+      puts '@verses: ' + @verses.inspect if @debug
+      
       list = list.first.to_a if list.first.is_a? Range
 
       if list.empty? then
-        return @verses.map.with_index {|x,i| Verse.new @book_name, @id, i+1, x}
+        return @verses.map.with_index do |x,i|
+          #puts 'x: ' + x.inspect
+          Verse.new @book_name, @id, i+1, x, debug: @debug
+        end
       elsif list.length < 2
         Verse.new @book_name, @id, list.first, @verses[list.first.to_i-1]
       else
-        list.flatten.map do |n|
+        list.flatten.map do |n| 
           Verse.new @book_name, @id, n, @verses[n.to_i-1]
         end
       end
@@ -85,7 +89,7 @@ module KjLite
   class Book
 
     attr_reader :id, :name, :permalink
-
+ 
     def initialize(id, name, chapters, debug: false)
 
       @id, @name, @debug = id, name, debug
@@ -103,7 +107,7 @@ module KjLite
 
     def chapters(*args)
 
-      puts 'args: ' + args.inspect if @debug
+      puts 'args: ' + args.inspect if @debug     
 
       if args.empty? then
         return @chapters
@@ -112,7 +116,7 @@ module KjLite
       else
         args.flatten.map {|n| @chapters[n-1] }.compact
       end
-
+      
     end
 
     def inspect()
@@ -131,7 +135,7 @@ module KjLite
 
     def initialize(url='https://gutenberg.org/cache/epub/30/pg30.txt',
                   debug: false)
-
+      
       filename, @debug = 'kjbible.txt', debug
 
       if File.exists?(filename) then
@@ -144,44 +148,42 @@ module KjLite
       s2 = s.split(/.*(?=^Book 01)/,3).last; 0
       a = s2.split(/.*(?=^Book \d+)/); 0
 
-      h = a.inject({}) do |r,x|
+      @h = a.inject({}) do |r,x|
 
         title, body = x.match(/^Book \d+\s+([^\r]+)\s+(.*)/m).captures
 
         a2 = body.split(/.*(?=\d+\:\d+\:\d+)/)
         a3 = a2.group_by {|x| x[/^\d+:\d+/]}.to_a.map(&:last)
-        r.merge(title => a3[1..-1])
+        r.merge(title => a3[1..-1])  
 
       end
-
+      
+      #puts '@h: ' + @h.keys.inspect
+=begin
       @h = h.group_by {|key, _| key[/\d*\s*(.*)/,1]}; 0
 
       @h.each do |key, value|
         @h[key] = value.length < 2 ? value.last.last : value.map(&:last)
       end
-
-      @to_h, @to_s, @booklist = @h, s, h.keys
+=end
+      @to_h, @to_s, @booklist = @h, s, @h.keys
 
     end
 
-    def books(ref=nil)
-
+    def books(ref=nil)           
+      
       return @booklist.map {|x| books(x) } unless ref
 
       index = ref.to_s[/^\d+$/] ? (ref.to_i - 1) : find_book(ref.downcase)
       puts 'index: ' + index.inspect if @debug
       title = @booklist[index]
-      r = @h[title.sub(/^\d+\s+/,'')]
+      #r = @h[title.sub(/^\d+\s+/,'')]
+      r = @h[title]
 
       puts 'r: '  + r.class.inspect if @debug
 
-      if r.length > 3 then
-        Book.new index+1, title, r, debug: @debug
-      else
-        i = ref[/\d+/].to_i - 1
-        a = r.map.with_index {|x,i| Book.new index+1, title, r[i], debug: @debug}
-        a[i]
-      end
+      Book.new index+1, title, r, debug: @debug
+
     end
 
     def inspect()
@@ -204,6 +206,8 @@ module KjLite
 
     def find_book(ref)
 
+      puts 'find_book/ref: ' + ref.inspect if @debug
+      
       h = @booklist.inject({}) do |r,rawx|
 
         x = rawx.downcase
@@ -215,16 +219,16 @@ module KjLite
           NoVowels.compact(x.sub(/(\d)\s/,'\1')),
           NoVowels.compact(x.sub(/(\d)\s/,'\1-')),
         ]
-        puts 'a3: ' + a3.inspect if @debug
+        #puts 'a3: ' + a3.inspect if @debug
         a3b = a3.uniq.abbrev.keys.reject {|x| x[/^\s*\d+$/] or x.length < 2}
         r.merge(rawx => a3b)
 
       end
-      puts 'h: '  + h.inspect if @debug
+      #puts 'h: '  + h.inspect if @debug
       r = h.find {|key, val| val.grep(/#{ref}/).any? }
       r = h.find {|key, vl| vl.grep(/#{ref.sub(/\d+\s*/,'')}/).any? } unless r
-      puts 'r: ' + r.inspect if @debug
-      @booklist.index r.first
+      puts '_r: ' + r.inspect if @debug
+      @booklist.index r.first if r
 
     end
 
